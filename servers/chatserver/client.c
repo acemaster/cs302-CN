@@ -1,31 +1,35 @@
-/*client goes here*/
-/*
-#include <stropts.h>
-#include <poll.h>
-...
-struct pollfd fds[2];
-int timeout_msecs = 500;
-int ret;
-    int i;
-
-fds[0].fd = open("/dev/dev0", ...);
-fds[1].fd = open("/dev/dev1", ...);
-    fds[0].events = POLLOUT;
-    fds[1].events = POLLOUT;
-
-ret = poll(fds, 2, timeout_msecs);
-
-if (ret > 0) {
-    for (i=0; i<2; i++) {
-        if (fds[i].revents & POLLOUT) {
-        
-        }
-        
-    }
-} */
-
-
 #include "vivek.h"
+#include <pthread.h>
+
+int fd;
+int writefd;
+pthread_t writethread,readthread;
+void *temp;
+
+void * thread_write(void *arg){
+	char message[100];
+	printf("\nKeep typing message\n");
+	while(1)
+	{
+		printf("User: ");
+		fgets(message,100,stdin);
+		printf("%s\n",message);
+		write(fd,message,sizeof(message));
+	}
+}
+
+void * thread_read(void *arg){
+	char buf[100];
+	while(1){
+		if(read(writefd,buf,100) > 0)
+		{
+			printf("Server: ");
+			printf("%s\n",buf);
+		}
+		fflush(stdout);
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	if(mkfifo(argv[1],0777) !=0)
@@ -33,15 +37,20 @@ int main(int argc, char *argv[])
 		perror ("The following error occurred");
 		exit(0);
 	}
-	int fd=open(argv[1],O_RDWR);
-	char message[10];
-	printf("\nKeep typing message\n");
-	while(1)
+	char buf[50];
+	snprintf(buf, sizeof(buf), "%s%s", argv[1], "write");
+	if(mkfifo(buf,0777) !=0)
 	{
-		printf("%s: ",argv[1]);
-		scanf("%s",message);
-		printf("%s\n",message);
-		write(fd,message,sizeof(message));
-	}	
+		perror ("The following error occurred");
+		exit(0);
+	}
+	fd=open(argv[1],O_RDWR);
+	writefd=open(buf,O_RDWR);
+	pthread_create(&writethread,NULL,thread_write,NULL);
+	pthread_create(&readthread,NULL,thread_read,NULL);
+	pthread_join(writethread,&temp);
+	pthread_join(readthread,&temp);
 	close(fd);
+	close(writefd);
+
 }
