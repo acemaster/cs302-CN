@@ -23,3 +23,25 @@ if (ret > 0) {
         
     }
 } */
+
+
+#include "vivek.h"
+int main(int argc, char *argv[])
+{
+	if(mkfifo(argv[1],0777) !=0)
+	{
+		perror ("The following error occurred");
+		exit(0);
+	}
+	int fd=open(argv[1],O_RDWR);
+	char message[10];
+	printf("\nKeep typing message\n");
+	while(1)
+	{
+		printf("%s: ",argv[1]);
+		scanf("%s",message);
+		printf("%s\n",message);
+		write(fd,message,sizeof(message));
+	}	
+	close(fd);
+}
