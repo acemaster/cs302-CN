@@ -7,5 +7,3 @@ Steps:
 3. Depending on the number of clients start a client as ```./clientprog client1 ``` 
 4. Pass the clients to server ``` ./server client1 client2 ....... clienti ``` Shared memory is used to assign one of the logfifos to the serverprogram
 5. Chat away
-
-![log server](file/logserver.png)
