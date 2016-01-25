@@ -1,7 +1,3 @@
-/*Server goes here
- *
- * */
-
 #include "vivek.h"
 #include <poll.h>
 
@@ -9,23 +5,28 @@ struct logfds{
 	int number;
 	int fd[10];
 };
-
+//Log Server
 int main(int argc,char *argv[]){
-	printf("\nServer is starting................");
-	int *fd;
-	int logfd;
+	printf("\nLog Server is starting................");
+	int fd;
+	struct logfds logs;
 	int i;
-	char buf[50];
-	fd= malloc((argc-1)*sizeof(int));
-	for(i=1;i<argc;i++){
-		if((fd[i-1]=open(argv[i],O_RDWR)) < 0)
+	logs.number=atoi(argv[1]);
+	for(i=0;i<logs.number;i++){
+		char buf[50];
+		snprintf(buf, sizeof(buf), "%s%d", "logfifo", i);
+		if(mkfifo(buf,0777) !=0)
+		{
+			perror ("The following error occurred");
+			exit(0);
+		}
+		if((logs.fd[i]=open(buf,O_RDWR)) < 0)
 		{
 			perror ("The following error occurred");
 			exit(0);
 		}
 	}
-
-	//Getting logfifo number from shared memory
+	//Shared memory creation and putting log fd info
 	int shmid1;
 	key_t key1;
 	key1=300;
@@ -36,43 +37,34 @@ int main(int argc,char *argv[]){
 	   (void) fprintf(stderr, "shmget: shmget returned %d\n", shmid1);
 	}
 	shm = (struct logfds *)shmat(shmid1, NULL, 0);
-	printf("Current Log fd number:%d \n",shm->number);
-	shm->number=shm->number-1;
-	int logno=shm->number;
-	snprintf(buf,sizeof(buf),"%s%d","logfifo",logno);
-
-	//Log Server opening
-	if((logfd=open(buf,O_RDWR)) < 0)
-		{
-			perror ("The following error occurred");
-			exit(0);
-		}	
+	shm->number=logs.number;
+	for(i=0;i<logs.number;i++)
+		shm->fd[i]=logs.fd[i];
+	//Creating polling fds
 	struct pollfd fds[10];
-	for(i=0;i<argc-1;i++)
-	{
-		fds[i].fd=fd[i];
+	for(i=0;i<logs.number;i++){
+		fds[i].fd=logs.fd[i];
 		fds[i].events=POLLRDNORM;
 	}
 	int temp;
 	int j=0;
 	int k;
-	printf("\nPoll fds are created................");
+	printf("\nlog fds are created................");
 	printf("\nServer started..................");
 	while(1){
-		int retstatus=poll(fds,argc-1,2000);
+		int retstatus=poll(fds,logs.number,2000);
 		// printf("Polling\n");
 		if(retstatus > 0){
 			// printf("Got message\n");
-			for(j=0;j<argc-1;j++)
+			for(j=0;j<logs.number;j++)
 			{
 				if(fds[j].revents == fds[j].events){
 					char buf[100];
-					printf("User %d: ",j);
+					printf("Logged: ");
 					if(read(fds[j].fd,buf,100) > 0)
 					{
 						printf("%s\n",buf);
 					}
-					write(logfd,buf,sizeof(buf));
 					fflush(stdout);
 				}
 			}
@@ -81,7 +73,3 @@ int main(int argc,char *argv[]){
 	}
 	return 0;
 }
-			
-		
-	
-	

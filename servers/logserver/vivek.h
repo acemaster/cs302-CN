@@ -13,6 +13,9 @@
 #include <signal.h>		/* for SIG_ERR */
 #include <fcntl.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <sys/ipc.h> 
+#include <sys/shm.h>
 #define	MAXLINE	4096			/* max line length */
 
 /*
