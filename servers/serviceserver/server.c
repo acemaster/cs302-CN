@@ -27,10 +27,10 @@ int main(int argc, char *argv[])
 {
 	char buf[100];
 	char buf2[100];
-	snprintf(buf2,sizeof(buf2),"%s%s",argv[1],"write");
-
+	snprintf(buf2,sizeof(buf2),"%s%d","serverfifo",atoi(argv[1]));
+	printf("%s\n",buf2);
 	//Main Server opening	
-	fd=open(argv[1],O_RDWR);
+	fd=open(buf2,O_RDWR);
 	writefd=open(buf2,O_RDWR);
 	printf("Opened the fifos....servers ready\n");
 	// pthread_create(&writethread,NULL,thread_write,NULL);

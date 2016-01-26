@@ -1,15 +1,67 @@
 #include "vivek.h"
-#include <poll.h>
+#include <pthread.h>
+
+
+int fd;
+int writefd;
+pthread_t writethread,readthread;
+void *temp;
+int gotserver=0;
+
 
 struct logfds{
 	int number;
 	int fd[10];
 };
 
+int status[10];
+int count=0;
+int start=0;
+
+
+void * thread_write(void *arg){
+	char message[100];
+	while(1){
+		if(gotserver == 1){
+			int j;
+			for(j=0;j<count;j++)
+				if(status[j] == 0)
+				{
+					start=j;
+					break;
+				}
+			snprintf(message,sizeof(message),"%s%d|%d","serverfifo",start,start);
+			printf("%s : Writing\n",message);
+			status[start]=1;
+			write(writefd,message,sizeof(message));
+			gotserver=0;
+		}
+ 	}
+
+}
+
+void * thread_read(void *arg){
+	char buf[100];
+	int j;
+	while(1){
+		if(read(fd,buf,100) > 0)
+		{
+				printf("%s: Read\nHello",buf);
+				if(strcmp(buf,"server") == 0)
+					gotserver=1;
+				else if((j=atoi(buf)!=0))
+				{
+					status[j-1]=0;
+					printf("Status of %d is changed back to 0\n",j-1);
+				}
+		}
+	}
+	
+}
+
 //Log Server
 int main(int argc,char *argv[]){
 	printf("\nMain Server is starting................");
-	int fd;
 	struct logfds logs;
 	struct logfds logwrite;
 	int i;
@@ -18,7 +70,7 @@ int main(int argc,char *argv[]){
 	for(i=0;i<logs.number;i++){
 		char buf[50];
 		char buf2[50];
-		snprintf(buf, sizeof(buf), "%s%d", "mainfifo", i);
+		snprintf(buf, sizeof(buf), "%s%d", "serverfifo", i);
 		if(mkfifo(buf,0777) !=0)
 		{
 			perror ("The following error occurred");
@@ -40,6 +92,8 @@ int main(int argc,char *argv[]){
 		// 	perror ("The following error occurred");
 		// 	exit(0);
 		// }
+		status[i]=0;
+		count++;
 	}
 
 	if(mkfifo("clientfifo",0777) !=0)
@@ -52,50 +106,13 @@ int main(int argc,char *argv[]){
 			perror ("The following error occurred");
 			exit(0);
 	}
-	//Shared memory creation and putting log fd info
-	int shmid1;
-	key_t key1;
-	key1=300;
-	int size=10000;
-	struct logfds *shm;
-	if ((shmid1 = shmget (key1, size, IPC_CREAT | 0666)) == -1) {
-	   perror("shmget: shmget failed"); exit(1); } else {
-	   (void) fprintf(stderr, "shmget: shmget returned %d\n", shmid1);
-	}
-	shm = (struct logfds *)shmat(shmid1, NULL, 0);
-	shm->number=logs.number;
-	for(i=0;i<logs.number;i++)
-		shm->fd[i]=logs.fd[i];
-	//Creating polling fds
-	struct pollfd fds[10];
-	for(i=0;i<logs.number;i++){
-		fds[i].fd=logs.fd[i];
-		fds[i].events=POLLRDNORM;
-	}
-	int temp;
-	int j=0;
-	int k;
-	printf("\nMain fds are created................");
-	printf("\nServer started..................");
-	while(1){
-		int retstatus=poll(fds,logs.number,2000);
-		// printf("Polling\n");
-		if(retstatus > 0){
-			// printf("Got message\n");
-			for(j=0;j<logs.number;j++)
-			{
-				if(fds[j].revents == fds[j].events){
-					char buf[100];
-					printf("Logged: ");
-					if(read(fds[j].fd,buf,100) > 0)
-					{
-						
-					}
-					fflush(stdout);
-				}
-			}
-		}
-		fflush(stdout); 
-	}
-	return 0;
+	fd=open("clientfifo",O_RDWR);
+	writefd=open("clientfifowrite",O_RDWR);
+	pthread_create(&writethread,NULL,thread_write,NULL);
+	pthread_create(&readthread,NULL,thread_read,NULL);
+	pthread_join(writethread,&temp);
+	pthread_join(readthread,&temp);
+	close(fd);
+	close(writefd);
+	
 }
