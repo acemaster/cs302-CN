@@ -23,6 +23,7 @@ void * thread_write(void *arg){
 	char message[100];
 	while(1){
 		if(gotserver == 1){
+			gotserver=0;
 			int j;
 			for(j=0;j<count;j++)
 				if(status[j] == 0)
@@ -34,7 +35,6 @@ void * thread_write(void *arg){
 			printf("%s : Writing\n",message);
 			status[start]=1;
 			write(writefd,message,sizeof(message));
-			gotserver=0;
 		}
  	}
 
