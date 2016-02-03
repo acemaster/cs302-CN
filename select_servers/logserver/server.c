@@ -5,30 +5,48 @@
 #include "vivek.h"
 #include <poll.h>
 
+struct logfds{
+	int number;
+	int fd[10];
+};
+
 int main(int argc,char *argv[]){
-	char message[200];
-	printf("\nServer is starting................ Clients %d",argc);
+	printf("\nServer is starting................");
 	int *fd;
-	int *writefd;
+	int logfd;
 	int i;
+	char buf[50];
 	fd= malloc((argc-1)*sizeof(int));
-	writefd=malloc((argc-1)*sizeof(int));
 	for(i=1;i<argc;i++){
-		char buf[50];
 		if((fd[i-1]=open(argv[i],O_RDWR)) < 0)
 		{
 			perror ("The following error occurred");
 			exit(0);
 		}
-		snprintf(buf, sizeof(buf), "%s%s", argv[i], "write");
-		if((writefd[i-1]=open(buf,O_RDWR)) < 0)
+	}
+
+	//Getting logfifo number from shared memory
+	int shmid1;
+	key_t key1;
+	key1=300;
+	int size=10000;
+	struct logfds *shm;
+	if ((shmid1 = shmget (key1, size, IPC_CREAT | 0666)) == -1) {
+	   perror("shmget: shmget failed"); exit(1); } else {
+	   (void) fprintf(stderr, "shmget: shmget returned %d\n", shmid1);
+	}
+	shm = (struct logfds *)shmat(shmid1, NULL, 0);
+	printf("Current Log fd number:%d \n",shm->number);
+	shm->number=shm->number-1;
+	int logno=shm->number;
+	snprintf(buf,sizeof(buf),"%s%d","logfifo",logno);
+
+	//Log Server opening
+	if((logfd=open(buf,O_RDWR)) < 0)
 		{
 			perror ("The following error occurred");
 			exit(0);
-		}
-		memset(buf,0,sizeof(buf));
-
-	}
+		}	
 	struct pollfd fds[10];
 	for(i=0;i<argc-1;i++)
 	{
@@ -54,10 +72,7 @@ int main(int argc,char *argv[]){
 					{
 						printf("%s\n",buf);
 					}
-					snprintf(message,sizeof(message),"User %d: %s",j,buf);
-					for(k=0;k<argc-1;k++)
-						if(k!=j)
-							write(writefd[k],message,sizeof(message));
+					write(logfd,buf,sizeof(buf));
 					fflush(stdout);
 				}
 			}

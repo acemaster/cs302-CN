@@ -13,7 +13,7 @@ void * thread_write(void *arg){
 	{
 		printf("User: ");
 		fgets(message,100,stdin);
-		// printf("%s\n",message);
+		printf("%s\n",message);
 		write(fd,message,sizeof(message));
 	}
 }
@@ -23,6 +23,7 @@ void * thread_read(void *arg){
 	while(1){
 		if(read(writefd,buf,100) > 0)
 		{
+			printf("Server: ");
 			printf("%s\n",buf);
 		}
 		fflush(stdout);
@@ -46,9 +47,9 @@ int main(int argc, char *argv[])
 	fd=open(argv[1],O_RDWR);
 	writefd=open(buf,O_RDWR);
 	pthread_create(&writethread,NULL,thread_write,NULL);
-	pthread_create(&readthread,NULL,thread_read,NULL);
+	// pthread_create(&readthread,NULL,thread_read,NULL);
 	pthread_join(writethread,&temp);
-	pthread_join(readthread,&temp);
+	// pthread_join(readthread,&temp);
 	close(fd);
 	close(writefd);
 
