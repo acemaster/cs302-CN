@@ -1,6 +1,6 @@
 #Server: Computer Networks First Assignment
 
-This has 5 types of servers
+This has 5 types of servers with select command
 
 1. All in one server
 2. Log Server
