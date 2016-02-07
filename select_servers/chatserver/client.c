@@ -43,8 +43,8 @@ int main(int argc, char *argv[])
 		perror ("The following error occurred");
 		exit(0);
 	}
-	fd=open(argv[1],O_RDWR| O_NONBLOCK);
-	writefd=open(buf,O_RDWR| O_NONBLOCK);
+	fd=open(argv[1],O_RDWR);
+	writefd=open(buf,O_RDWR);
 	pthread_create(&writethread,NULL,thread_write,NULL);
 	pthread_create(&readthread,NULL,thread_read,NULL);
 	pthread_join(writethread,&temp);

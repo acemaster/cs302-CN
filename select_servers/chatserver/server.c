@@ -20,13 +20,13 @@ int main(int argc,char *argv[]){
 	writefd=malloc((argc-1)*sizeof(int));
 	for(i=1;i<argc;i++){
 		char buf[50];
-		if((fd[i-1]=open(argv[i],O_RDWR| O_NONBLOCK)) < 0)
+		if((fd[i-1]=open(argv[i],O_RDWR)) < 0)
 		{
 			perror ("The following error occurred");
 			exit(0);
 		}
 		snprintf(buf, sizeof(buf), "%s%s", argv[i], "write");
-		if((writefd[i-1]=open(buf,O_RDWR| O_NONBLOCK)) < 0)
+		if((writefd[i-1]=open(buf,O_RDWR)) < 0)
 		{
 			perror ("The following error occurred");
 			exit(0);
@@ -34,9 +34,12 @@ int main(int argc,char *argv[]){
 		memset(buf,0,sizeof(buf));
 
 	}
+	int max=0;
 	for(i=0;i<argc-1;i++)
 	{
 		FD_SET(fd[i],&readset);
+		if(fd[i] > max)
+			max=fd[i];
 	}
 	int temp;
 	int j=0;
@@ -44,7 +47,7 @@ int main(int argc,char *argv[]){
 	printf("\nPoll fds are created................");
 	printf("\nServer started..................");
 	while(1){
-		int retstatus=select(argc,&readset,NULL,NULL,&timeptr);
+		int retstatus=select(max+1,&readset,NULL,NULL,&timeptr);
 		if (retstatus <0)
 			perror("Error: ");
 		// printf("Polling %d\n",retstatus);
@@ -69,6 +72,12 @@ int main(int argc,char *argv[]){
 			}
 		}
 		fflush(stdout); 
+		for(i=0;i<argc-1;i++)
+		{
+			FD_SET(fd[i],&readset);
+			if(fd[i] > max)
+				max=fd[i];
+		}
 	}
 	return 0;
 }
