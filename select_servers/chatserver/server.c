@@ -3,9 +3,14 @@
  * */
 
 #include "vivek.h"
-#include <poll.h>
+#include <sys/select.h>
 
 int main(int argc,char *argv[]){
+	fd_set readset;
+	FD_ZERO(&readset);
+	struct timeval timeptr;
+	timeptr.tv_sec=0;
+	timeptr.tv_usec=0;
 	char message[200];
 	printf("\nServer is starting................ Clients %d",argc);
 	int *fd;
@@ -15,13 +20,13 @@ int main(int argc,char *argv[]){
 	writefd=malloc((argc-1)*sizeof(int));
 	for(i=1;i<argc;i++){
 		char buf[50];
-		if((fd[i-1]=open(argv[i],O_RDWR)) < 0)
+		if((fd[i-1]=open(argv[i],O_RDWR| O_NONBLOCK)) < 0)
 		{
 			perror ("The following error occurred");
 			exit(0);
 		}
 		snprintf(buf, sizeof(buf), "%s%s", argv[i], "write");
-		if((writefd[i-1]=open(buf,O_RDWR)) < 0)
+		if((writefd[i-1]=open(buf,O_RDWR| O_NONBLOCK)) < 0)
 		{
 			perror ("The following error occurred");
 			exit(0);
@@ -29,11 +34,9 @@ int main(int argc,char *argv[]){
 		memset(buf,0,sizeof(buf));
 
 	}
-	struct pollfd fds[10];
 	for(i=0;i<argc-1;i++)
 	{
-		fds[i].fd=fd[i];
-		fds[i].events=POLLRDNORM;
+		FD_SET(fd[i],&readset);
 	}
 	int temp;
 	int j=0;
@@ -41,16 +44,19 @@ int main(int argc,char *argv[]){
 	printf("\nPoll fds are created................");
 	printf("\nServer started..................");
 	while(1){
-		int retstatus=poll(fds,argc-1,2000);
-		// printf("Polling\n");
+		int retstatus=select(argc,&readset,NULL,NULL,&timeptr);
+		if (retstatus <0)
+			perror("Error: ");
+		// printf("Polling %d\n",retstatus);
 		if(retstatus > 0){
-			// printf("Got message\n");
+			printf("Got message\n");
 			for(j=0;j<argc-1;j++)
 			{
-				if(fds[j].revents == fds[j].events){
+				if(FD_ISSET(fd[j],&readset))
+				{
 					char buf[100];
 					printf("User %d: ",j);
-					if(read(fds[j].fd,buf,100) > 0)
+					if(read(fd[j],buf,100) > 0)
 					{
 						printf("%s\n",buf);
 					}
