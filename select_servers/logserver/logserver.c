@@ -1,5 +1,5 @@
 #include "vivek.h"
-#include <poll.h>
+#include <sys/select.h>
 
 struct logfds{
 	int number;
@@ -9,6 +9,11 @@ struct logfds{
 int main(int argc,char *argv[]){
 	printf("\nLog Server is starting................");
 	int fd;
+	fd_set readset;
+	FD_ZERO(&readset);
+	struct timeval timeptr;
+	timeptr.tv_sec=0;
+	timeptr.tv_usec=0;
 	struct logfds logs;
 	int i;
 	logs.number=atoi(argv[1]);
@@ -41,10 +46,12 @@ int main(int argc,char *argv[]){
 	for(i=0;i<logs.number;i++)
 		shm->fd[i]=logs.fd[i];
 	//Creating polling fds
-	struct pollfd fds[10];
-	for(i=0;i<logs.number;i++){
-		fds[i].fd=logs.fd[i];
-		fds[i].events=POLLRDNORM;
+	int max=0;
+	for(i=0;i<argc-1;i++)
+	{
+		FD_SET(logs.fd[i],&readset);
+		if(logs.fd[i] > max)
+			max=logs.fd[i];
 	}
 	int temp;
 	int j=0;
@@ -52,16 +59,17 @@ int main(int argc,char *argv[]){
 	printf("\nlog fds are created................");
 	printf("\nServer started..................");
 	while(1){
-		int retstatus=poll(fds,logs.number,2000);
+		int retstatus=select(max+1,&readset,NULL,NULL,&timeptr);
 		// printf("Polling\n");
 		if(retstatus > 0){
 			// printf("Got message\n");
 			for(j=0;j<logs.number;j++)
 			{
-				if(fds[j].revents == fds[j].events){
+				if(FD_ISSET(logs.fd[j],&readset))
+				{
 					char buf[100];
 					printf("Logged: ");
-					if(read(fds[j].fd,buf,100) > 0)
+					if(read(logs.fd[j],buf,100) > 0)
 					{
 						printf("%s\n",buf);
 					}
@@ -70,6 +78,12 @@ int main(int argc,char *argv[]){
 			}
 		}
 		fflush(stdout); 
+		for(i=0;i<argc-1;i++)
+		{
+			FD_SET(logs.fd[i],&readset);
+			if(logs.fd[i] > max)
+				max=logs.fd[i];
+		}
 	}
 	return 0;
 }

@@ -3,7 +3,7 @@
  * */
 
 #include "vivek.h"
-#include <poll.h>
+ #include <sys/select.h>
 
 struct logfds{
 	int number;
@@ -11,6 +11,11 @@ struct logfds{
 };
 
 int main(int argc,char *argv[]){
+	fd_set readset;
+	FD_ZERO(&readset);
+	struct timeval timeptr;
+	timeptr.tv_sec=0;
+	timeptr.tv_usec=0;
 	printf("\nServer is starting................");
 	int *fd;
 	int logfd;
@@ -47,11 +52,12 @@ int main(int argc,char *argv[]){
 			perror ("The following error occurred");
 			exit(0);
 		}	
-	struct pollfd fds[10];
+	int max=0;
 	for(i=0;i<argc-1;i++)
 	{
-		fds[i].fd=fd[i];
-		fds[i].events=POLLRDNORM;
+		FD_SET(fd[i],&readset);
+		if(fd[i] > max)
+			max=fd[i];
 	}
 	int temp;
 	int j=0;
@@ -59,16 +65,18 @@ int main(int argc,char *argv[]){
 	printf("\nPoll fds are created................");
 	printf("\nServer started..................");
 	while(1){
-		int retstatus=poll(fds,argc-1,2000);
-		// printf("Polling\n");
+		int retstatus=select(max+1,&readset,NULL,NULL,&timeptr);
+		if (retstatus <0)
+			perror("Error: ");
+		// printf("Polling %d\n",retstatus);
 		if(retstatus > 0){
 			// printf("Got message\n");
 			for(j=0;j<argc-1;j++)
 			{
-				if(fds[j].revents == fds[j].events){
+				if(FD_ISSET(fd[j],&readset)){
 					char buf[100];
 					printf("User %d: ",j);
-					if(read(fds[j].fd,buf,100) > 0)
+					if(read(fd[j],buf,100) > 0)
 					{
 						printf("%s\n",buf);
 					}
@@ -78,6 +86,12 @@ int main(int argc,char *argv[]){
 			}
 		}
 		fflush(stdout); 
+		for(i=0;i<argc-1;i++)
+		{
+			FD_SET(fd[i],&readset);
+			if(fd[i] > max)
+				max=fd[i];
+		}
 	}
 	return 0;
 }
