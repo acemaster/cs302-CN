@@ -1,5 +1,6 @@
 #include "vivek.h"
 #include <poll.h>
+#include <sys/select.h>
 
 static void sig_usr(int signo);
 
@@ -22,6 +23,11 @@ struct logfds{
 
 //All in one Server
 int main(int argc,char *argv[]){
+	fd_set readset;
+	FD_ZERO(&readset);
+	struct timeval timeptr;
+	timeptr.tv_sec=0;
+	timeptr.tv_usec=0;
 	printf("\nMain Server is starting................");
 	int fd;
 	struct logfds logs;
@@ -45,13 +51,15 @@ int main(int argc,char *argv[]){
 	}
 	pipe(logs.pipefd);
 	logs.number=3;
-	struct pollfd fds[10];
+	int max=0;
 	for(i=0;i<logs.number;i++){
-		fds[i].fd=logs.fd[i];
-		fds[i].events=POLLRDNORM;
+		FD_SET(logs.fd[i],&readset);
+		if(max < logs.fd[i])
+			max=logs.fd[i];
 	}
-	fds[logs.number].fd=logs.pipefd[0];
-	fds[logs.number].events=POLLRDNORM;
+	FD_SET(logs.pipefd[0],&readset);
+	if(max < logs.pipefd[0])
+		max=logs.pipefd[0];
 	int pid;
 	if((pid = fork())<0)
 		printf("Error for fork");
@@ -63,24 +71,44 @@ int main(int argc,char *argv[]){
 		printf("\nClient fds are created................");
 		printf("\nServer started..................");
 		while(1){
-			int retstatus=poll(fds,logs.number+1,2000);
+			int retstatus=select(max+1,&readset,NULL,NULL,&timeptr);
 			// printf("Polling\n");
 			if(retstatus > 0){
 				// printf("Got message\n");
-				for(j=0;j<logs.number+1;j++)
+				for(j=0;j<logs.number;j++)
 				{
-					if(fds[j].revents == fds[j].events){
+					if(FD_ISSET(logs.fd[j],&readset))
+					{
 						char buf[100];
 						printf("Logged: ");
-						if(read(fds[j].fd,buf,100) > 0)
+						if(read(logs.fd[j],buf,100) > 0)
 						{
 							printf("\n%s\n",buf);
 						}
 						fflush(stdout);
 					}
 				}
+				if(FD_ISSET(logs.pipefd[0],&readset))
+				{
+					char buf[100];
+					printf("Logged: ");
+					if(read(logs.pipefd[0],buf,100) > 0)
+					{
+						printf("\n%s\n",buf);
+					}
+					fflush(stdout);
+				}
 			}
 			fflush(stdout); 
+			for(i=0;i<logs.number;i++)
+			{
+				FD_SET(logs.fd[i],&readset);
+				if(max < logs.fd[i])
+					max=logs.fd[i];
+			}
+			FD_SET(logs.pipefd[0],&readset);
+			if(max < logs.pipefd[0])
+				max=logs.pipefd[0];
 		}
 	}
 	else{
