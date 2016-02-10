@@ -27,6 +27,7 @@ void * thread_write(void *arg){
 					quit=1;
 					fd=open("clientfifo",O_RDWR);
 					snprintf(message,sizeof(message),"%d",server_no);
+					printf("Quit message : %s\n",message);
 					write(fd,message,sizeof(message));
 					break;
 				}
@@ -42,7 +43,10 @@ void * thread_read(void *arg){
 		{
 				printf("Server: ");
 				printf("%s\n",buftemp);
-				quit=1;
+				if(strcmp(buftemp,"sorry\0") == 0 || strlen(buftemp) == 0)
+					quit=0;
+				else
+					quit=1;
 		}
 		if(quit == 1){
 			printf("Fifo name: %s ",buftemp);
@@ -62,6 +66,7 @@ void * thread_read(void *arg){
 			char buf2[20];
 			snprintf(buf2,sizeof(buf2),"%s%s",buf,"write");
 			writefd=open(buf2,O_RDWR);
+			printf("Server number: %d\n",server_no);
 			gotserver=1;
 			fflush(stdout);
 		}

@@ -31,10 +31,13 @@ void * thread_write(void *arg){
 					start=j;
 					break;
 				}
+			if(start == -1)
+				write(writefd,"sorry\0",6);
 			snprintf(message,sizeof(message),"%s%d|%d","serverfifo",start,start);
 			printf("%s : Writing\n",message);
 			status[start]=1;
 			write(writefd,message,sizeof(message));
+			start=-1;
 		}
  	}
 
@@ -51,8 +54,8 @@ void * thread_read(void *arg){
 					gotserver=1;
 				else if((j=atoi(buf)!=0))
 				{
-					status[j-1]=0;
-					printf("Status of %d is changed back to 0\n",j-1);
+					status[atoi(buf)-1]=0;
+					printf("Status of %d is changed back to 0\n",atoi(buf)-1);
 				}
 		}
 	}

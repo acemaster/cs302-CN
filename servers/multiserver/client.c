@@ -66,6 +66,11 @@ int main(int argc, char *argv[])
 	}
 	shm = (struct logfds *)shmat(shmid1, NULL, 0);
 	printf("Current Log fd number:%d \n",shm->number);
+	if(shm->number == 0)
+	{
+		printf("All servers occupied \n");
+		exit(0);
+	}
 	shm->number=shm->number-1;
 	int logno=shm->number;
 	snprintf(buf,sizeof(buf),"%s%d","mainfifo",logno);
