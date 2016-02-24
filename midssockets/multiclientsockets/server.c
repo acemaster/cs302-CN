@@ -14,11 +14,14 @@ struct services{
     int s1;
     int s2;
 };
+
+
+
 int main(int argc, char *argv[])
 {
      int sfd[20],nsfd,n,portno[20];
-     char *lower_args[] = {"./lower", NULL};
-     char *upper_args[] = {"./upper", NULL};
+     char *server_args[] = {"./server2","8002",NULL};
+     int serverstatus=0;
      //==========Select config===============
      fd_set readset;
      FD_ZERO(&readset);
@@ -44,13 +47,7 @@ int main(int argc, char *argv[])
             error("Error on binding: ");
         listen(sfd[i],5);
     }
-    for(i=0;i<argc-1;i++)
-    {
-        FD_SET(sfd[i],&readset);
-        if(sfd[i] > max)
-            max=sfd[i];
-    }
-    int service=0;
+    //==============Initializing shared mem====================
     int shmid1;
     key_t key1;
     key1=300;
@@ -61,8 +58,16 @@ int main(int argc, char *argv[])
        (void) fprintf(stderr, "shmget: shmget returned %d\n", shmid1);
     }
     shm = (struct services *)shmat(shmid1, NULL, 0);
-    shm->s1=3;
-    shm->s2=4;
+    shm->s1=0;
+    shm->s2=0;
+    //==============End Initializing shared mem====================
+
+    for(i=0;i<argc-1;i++)
+    {
+        FD_SET(sfd[i],&readset);
+        if(sfd[i] > max)
+            max=sfd[i];
+    }
     printf("\nSelect socket fds are created................");
     printf("\nServer started..................");
     clientn=sizeof(clientaddr);
@@ -79,31 +84,26 @@ int main(int argc, char *argv[])
             {
                 if(FD_ISSET(sfd[i],&readset))
                 {
-                    if(i+1 == 1 && shm->s1 <=0)
-                        continue;
-                    else if(i+1 == 2 && shm->s2 <= 0)
-                        continue;
                     nsfd=accept(sfd[i],(struct sockaddr *) &clientaddr, &clientn);
                     int pid=fork();
                     if(pid == 0){
                         close(sfd[i]);
                         bzero(buffer,250);
-                        dup2(nsfd,0);
-                        dup2(nsfd,1);
-                        close(nsfd);
-                        if(i+1 == 1)
+                        if(shm->s1 ==0)
                         {
-                            shm->s1--;
-                            printf("Exceing lower\n");
-                            execv("./lower",lower_args);
+                            shm->s1++;
+                            printf("Exceing mini server\n");
+                            strcpy(buffer,"8002");
+                            n=write(nsfd,buffer,sizeof(buffer));
+                            close(nsfd);
+                            execv("./server2",server_args);
                             printf("Failed\n");
                         }
                         else
                         {
-                            shm->s2--;
-                            printf("Exceing Upper\n");
-                            execv("./upper",upper_args);
-                             printf("Failed\n");
+                            strcpy(buffer,"8002");
+                            n=write(nsfd,buffer,sizeof(buffer));
+                            close(nsfd);
                         }
                     }
                     else if(pid > 0){

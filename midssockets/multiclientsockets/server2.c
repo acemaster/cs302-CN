@@ -1,7 +1,11 @@
+#include "vivek.h"
+
 /* A simple server in the internet domain using TCP
    The port number is passed as an argument */
-#include "vivek.h"
 #include <sys/select.h>
+
+pthread_t clientthread[10];
+int clientno=0;
 
 void error(const char *msg)
 {
@@ -9,17 +13,38 @@ void error(const char *msg)
     exit(1);
 }
 
-
-struct services{
-    int s1;
-    int s2;
+struct clientthreadarg{
+	int nsfd;
 };
+
+void *clientthreadfunc(void *arg)
+{
+	char buffer[250];
+	struct clientthreadarg *argv=arg;
+	int nsfd=argv->nsfd;
+	int n;
+	while(1){
+        bzero(buffer,250);
+        n=read(nsfd,buffer,100);
+        if(n > 0)
+        {
+            if(strcmp(buffer,"exit\n") == 0)
+            {
+                close(nsfd);
+                break;
+            }
+            printf("Client: %s\n",buffer);
+            buffer[0]=toupper(buffer[0]);
+            n=write(nsfd,buffer,sizeof(buffer));
+        }
+    }
+    printf("Client leaving...........\n");
+    pthread_exit(0);
+}
+
 int main(int argc, char *argv[])
 {
      int sfd[20],nsfd,n,portno[20];
-     char *lower_args[] = {"./lower", NULL};
-     char *upper_args[] = {"./upper", NULL};
-     //==========Select config===============
      fd_set readset;
      FD_ZERO(&readset);
      struct timeval timeptr;
@@ -51,20 +76,8 @@ int main(int argc, char *argv[])
             max=sfd[i];
     }
     int service=0;
-    int shmid1;
-    key_t key1;
-    key1=300;
-    int size=10000;
-    struct services *shm;
-    if ((shmid1 = shmget (key1, size, IPC_CREAT | 0666)) == -1) {
-       perror("shmget: shmget failed"); exit(1); } else {
-       (void) fprintf(stderr, "shmget: shmget returned %d\n", shmid1);
-    }
-    shm = (struct services *)shmat(shmid1, NULL, 0);
-    shm->s1=3;
-    shm->s2=4;
-    printf("\nSelect socket fds are created................");
-    printf("\nServer started..................");
+    printf("\nStarted mini server................");
+    printf("\nMini server running..................");
     clientn=sizeof(clientaddr);
     char buffer[250];
     bzero(buffer,250);
@@ -79,36 +92,10 @@ int main(int argc, char *argv[])
             {
                 if(FD_ISSET(sfd[i],&readset))
                 {
-                    if(i+1 == 1 && shm->s1 <=0)
-                        continue;
-                    else if(i+1 == 2 && shm->s2 <= 0)
-                        continue;
                     nsfd=accept(sfd[i],(struct sockaddr *) &clientaddr, &clientn);
-                    int pid=fork();
-                    if(pid == 0){
-                        close(sfd[i]);
-                        bzero(buffer,250);
-                        dup2(nsfd,0);
-                        dup2(nsfd,1);
-                        close(nsfd);
-                        if(i+1 == 1)
-                        {
-                            shm->s1--;
-                            printf("Exceing lower\n");
-                            execv("./lower",lower_args);
-                            printf("Failed\n");
-                        }
-                        else
-                        {
-                            shm->s2--;
-                            printf("Exceing Upper\n");
-                            execv("./upper",upper_args);
-                             printf("Failed\n");
-                        }
-                    }
-                    else if(pid > 0){
-                        close(nsfd);
-                    }
+                    struct clientthreadarg temp;
+                    temp.nsfd=nsfd;
+                    pthread_create(&clientthread[clientno++],NULL,clientthreadfunc,&temp);
                 }
             }
         }
