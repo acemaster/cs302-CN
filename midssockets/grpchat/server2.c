@@ -22,9 +22,14 @@ int clientno=0;
 int clients[10];
 void *clientthreadfunc(void *arg)
 {
+    int k;
+    for(k=0;k<clientno;k++)
+        printf("%d|||\n",clients[k]);
 	char buffer[250];
 	struct clientthreadarg *argv=arg;
 	int nsfd=argv->nsfd;
+    int tclient=argv->clientid;
+    printf("Client no: %d\n",tclient);
 	int n;
     int i;
 	while(1){
@@ -37,13 +42,18 @@ void *clientthreadfunc(void *arg)
                 close(nsfd);
                 break;
             }
-            printf("Client %s: %s\n",argv->groupname,buffer);
+            printf("Client Group:%s ID: %d : %s\n",argv->groupname,tclient,buffer);
             buffer[0]=toupper(buffer[0]);
             n=write(nsfd,buffer,sizeof(buffer));
             for(i=0;i<clientno;i++)
             {
-                if(i!=argv->clientid);
+                if(i!=tclient)
+                {
+                    printf("Writing to other clients: %d\n",clients[i]);
                     n=write(clients[i],buffer,sizeof(buffer));
+                    if(n <=0)
+                        printf("Error: %d\n",n);
+                }
             }
         }
     }
@@ -108,6 +118,7 @@ int main(int argc, char *argv[])
                     strcpy(temp.groupname,argv[2]);
                     temp.clientid=clientno;
                     clients[clientno]=nsfd;
+                    printf("No of clients in room: %d\n",clientno);
                     pthread_create(&clientthread[clientno++],NULL,clientthreadfunc,&temp);
                 }
             }
