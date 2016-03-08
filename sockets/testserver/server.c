@@ -38,7 +38,12 @@ int main(int argc, char *argv[])
      if (newsockfd < 0) 
           error("ERROR on accept");
      bzero(buffer,256);
-     n = read(newsockfd,buffer,255);
+     while(1)
+    {
+     n=recv(newsockfd,buffer,100,MSG_DONTWAIT);
+     if(n>0)
+        printf("%s\n",buffer);
+    }
      if (n < 0) error("ERROR reading from socket");
      printf("Here is the message: %s\n",buffer);
      n = write(newsockfd,"I got your message",18);
