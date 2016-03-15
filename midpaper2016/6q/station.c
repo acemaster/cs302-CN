@@ -9,12 +9,17 @@ void error(const char *msg)
 
 struct services{
 	int p[10];
-	char *portno[10];
+	int portno[10];
 };
 
+int platfds[3];
+static void sig_usr(int signo);
 
 int main(int argc, char *argv[])
 {
+    printf("Process id of parent station: %d\n",getpid());
+    //Binding the signal
+     signal(SIGUSR1,sig_usr);
      int sfd[20],nsfd,n,portno[20];
      //==========Select config===============
      fd_set readset;
@@ -52,7 +57,7 @@ int main(int argc, char *argv[])
     int shmid1;
     key_t key1;
     key1=300;
-    int size=10000;
+    int size=1000;
     struct services *shm;
     if ((shmid1 = shmget (key1, size, IPC_CREAT | 0666)) == -1) {
        perror("shmget: shmget failed"); exit(1); } else {
@@ -63,14 +68,19 @@ int main(int argc, char *argv[])
     for(i=0;i<2;i++)
     {
     	shm->p[i]=0;
-        shm->portno[i]=(char *)malloc(100*sizeof(char));
-    	snprintf(shm->portno[i],sizeof(shm->portno[i]),"%d",startport);
-        printf("Port no of platform %d is %s\n",i,shm->portno[i]);
+        shm->portno[i]=startport;
+    	// snprintf(shm->portno[i],sizeof(shm->portno[i]),"%d",startport);
+        printf("Port no of platform %d is %d\n",i,shm->portno[i]);
     	startport++;
     }
-    FILE *platform1=popen("cd /home/acemaster/CS302/cs302-CN/midpaper2016/6q/;./platform 8005","w");
-    FILE *platform2=popen("cd /home/acemaster/CS302/cs302-CN/midpaper2016/6q/;./platform 8006","w");
-    int platfds[3];
+    int parentid=getpid();
+    char *buffercmd="cd /home/acemaster/CS302/cs302-CN/midpaper2016/6q/;./platform ";
+    char platform1path[100];
+    char platform2path[100];
+    snprintf(platform1path,sizeof(platform1path),"%s %d %d",buffercmd,8005,parentid);
+    snprintf(platform2path,sizeof(platform2path),"%s %d %d",buffercmd,8006,parentid);
+    FILE *platform1=popen(platform1path,"w");
+    FILE *platform2=popen(platform2path,"w");
     platfds[0]=fileno(platform1);
     platfds[1]=fileno(platform2);
     printf("\nSelect socket fds are created................");
@@ -93,10 +103,10 @@ int main(int argc, char *argv[])
                 if(FD_ISSET(sfd[i],&readset))
                 {
                     for(j=0;j<2;j++)
-                    	if(shm->p[i]==0)
+                    	if(shm->p[j]==0)
                     	{
                     		shm->p[i]=1;
-                    		platform_no=i;
+                    		platform_no=j;
                             break;
                     	}
                     for(j=0;j<2;j++)
@@ -105,7 +115,8 @@ int main(int argc, char *argv[])
                     nsfd=accept(sfd[i],(struct sockaddr *) &clientaddr, &clientn);
                     int pid=fork();
                     if(pid == 0){
-                        write(nsfd,shm->portno[platform_no],sizeof(shm->portno[platform_no]));
+                        snprintf(buffer,sizeof(buffer),"%d",shm->portno[platform_no]);
+                        write(nsfd,buffer,sizeof(buffer));
                         close(nsfd);
                     }
                     else if(pid > 0){
@@ -121,5 +132,19 @@ int main(int argc, char *argv[])
             if(sfd[i] > max)
                 max=sfd[i];
         }
+    }
+}
+
+
+
+static void sig_usr(int signo)
+{
+    printf("Recieved signal.................\n");
+    if(signo == SIGUSR1)
+    {
+        printf("Sending train status to all platforms.................\n");
+        int i;
+        for(i=0;i<2;i++)
+            write(platfds[i],"Train has left",15);
     }
 }
