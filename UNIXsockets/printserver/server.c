@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
      socklen_t clientn;
      struct sockaddr_in myaddr,clientaddr;
      portno=atoi(argv[1]);
-     sfd=socket(AF_INET,SOCK_STREAM,0);
+     sfd=socket(AF_UNIX,SOCK_STREAM,0);
      if(sfd<0)
         error("Socket not initilizated");
     bzero((char *)&myaddr,sizeof(myaddr));
