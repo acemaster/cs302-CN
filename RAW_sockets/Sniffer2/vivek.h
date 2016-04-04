@@ -73,7 +73,7 @@ int init_sockconnectraw(int portno,int protocol,struct sockaddr_in serv_addr) {
 }
 
 
-int init_sockconnectrawhdrincl(int portno,int protocol,struct sockaddr_in serv_addr) {
+int init_sockconnectrawhdrincl(int portno,int protocol) {
     int len, sfd;
     if((sfd = socket(AF_INET, SOCK_RAW, protocol)) < 0){
         perror("socket() ");
@@ -86,7 +86,6 @@ int init_sockconnectrawhdrincl(int portno,int protocol,struct sockaddr_in serv_a
     return sfd;
 
 }
-
 
 void printipheader(struct iphdr *iph, struct sockaddr_in s_addr,struct sockaddr_in d_addr,char *buffer)
 {
