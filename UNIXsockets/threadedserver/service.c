@@ -1,5 +1,38 @@
 #include "vivek.h"
 
+int clientno=0;
+int clients[10];
+pthread_t clientthread[10];
+
+struct clientthreadarg{
+    int nsfd;
+};
+
+
+void *clientthreadfunc(void *arg)
+{
+    printf("In thread...........\n");
+    struct clientthreadarg *argv=arg;
+    int nsfd=argv->nsfd;
+    int n;
+    int i;
+    char buffer[250];
+    while(1){
+        bzero(buffer,250);
+        n=read(nsfd,buffer,100);
+        if(n > 0)
+        {
+            if(strcmp(buffer,"exit\n") == 0)
+            {
+                close(nsfd);
+                break;
+            }
+            printf("Server: %s\n",buffer);
+        }
+    }
+    printf("Client leaving...........\n");
+    pthread_exit(0);
+}
 
 int main(int argc,char **argv)
 {
@@ -22,24 +55,11 @@ int main(int argc,char **argv)
 			perror("recv_fd() ");
 			exit(1);
 		}
-		int pid=fork();
-		if(pid == 0)
-		{
-			while(1)
-			{
-				bzero(buf,sizeof(buf));
-				n=read(fd,buf,100);
-				if(n > 0)
-				{
-					printf("Client:%d %s\n",i,buf);
-				}
-			}
-		}
-		else
-		{
-			close(fd);
-			i++;
-		}
+		printf("Recieved client\n");
+        struct clientthreadarg temp;
+        temp.nsfd=fd;
+        clients[clientno]=fd;
+        pthread_create(&clientthread[clientno++],NULL,clientthreadfunc,&temp);
 	}
 	return 0;
 }

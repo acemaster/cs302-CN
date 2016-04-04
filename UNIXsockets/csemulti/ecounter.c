@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "vivek.h"
 
 int main(int argc,char **argv)
@@ -5,6 +6,7 @@ int main(int argc,char **argv)
 	int threshold=atoi(argv[1]);
 	printf("threshold is : %d\n",threshold);
 	int usfd = init_sockconnect("/tmp/socket3");
+	int tusfd = init_sockconnect("/tmp/socketE");
 	if(usfd < 0){
 		printf("sock() error\n");
 		exit(1);
@@ -43,7 +45,27 @@ int main(int argc,char **argv)
 		else
 		{
 			printf("threshold crossed ....... Closing ticket collection\n");
+			int lengt;
+			struct ucred ucr;
+			lengt=sizeof(struct ucred);
+			if(getsockopt(tusfd,SOL_SOCKET,SO_PEERCRED,&ucr,&lengt) == -1)
+			{
+				printf("Connection lost\n");
+				break;
+			}
+			kill(ucr.pid,SIGUSR1);
 		}
 	}
 	return 0;
 }
+
+
+/*
+int leng
+struct ucred ucr;
+leng=sizeof(struct ucred);
+if(getsockopt(usfd,SOL_SOCKET,SOPEERCRED,&ucr,&lengt) == -1)
+exit
+
+kill(usr.pid,SIGUSR1)
+*/
