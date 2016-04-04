@@ -1,7 +1,5 @@
 #include "vivek.h"
 
-#define BUFFER_SIZE 1024
-
 int total=0;
 
 int main(int argc,char **argv)
@@ -13,14 +11,21 @@ int main(int argc,char **argv)
 	int rsfd=init_sockbindraw(portno,protocol,serv_addr);
 	char buffer[BUFFER_SIZE];
 	struct iphdr *iph;
+	int recvbytes;
+	int len;
 	while(1)
 	{
-		if(recvfrom(rsfd,BUFFER_SIZE,0,(struct sockaddr *)&serv_addr,sizeof(serv_addr))<0)
+		len==sizeof(serv_addr);
+		if((recvbytes=recvfrom(rsfd,buffer,BUFFER_SIZE,0,(struct sockaddr *)&serv_addr,&len))<0)
 		{
+			printf("%d\n",recvbytes);
 			perror("Send to ");
 		}
-		printf("Packet count: %d \n",total);
-		iph=(struct iphdr *)buffer;
-		printipheader(iph,saddr,daddr,buffer);
+		if(recvbytes > 0)
+		{
+			printf("Packet count: %d \n",total);
+			iph=(struct iphdr *)buffer;
+			printipheader(iph,saddr,daddr,buffer);
+		}
 	}
 }

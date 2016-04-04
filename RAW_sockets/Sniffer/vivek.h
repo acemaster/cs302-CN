@@ -16,17 +16,19 @@
 #include <netinet/if_ether.h>
 #include <netdb.h>
 
+#define BUFFER_SIZE 1024
 
-int init_sockbindraw(int portno,int protocol,struct sockaddr_in &myaddr) {
+
+int init_sockbindraw(int portno,int protocol,struct sockaddr_in serv_addr) {
     int len, sfd;
     if((sfd = socket(AF_INET, SOCK_RAW,protocol)) < 0){
         perror("socket() ");
         return -1;
     }
-    myaddr.sin_family=AF_INET;
-    myaddr.sin_addr.s_addr=INADDR_ANY;
-    myaddr.sin_port=htons(portno);
-    if((bind(sfd,(struct sockaddr *) &myaddr, sizeof(myaddr)))<0)
+    serv_addr.sin_family=AF_INET;
+    serv_addr.sin_addr.s_addr=inet_addr("127.0.0.1");
+    serv_addr.sin_port=htons(portno);
+    if((bind(sfd,(struct sockaddr *) &serv_addr, sizeof(serv_addr)))<0)
             error("Error on binding: ");
     return sfd;
 }
@@ -45,36 +47,29 @@ int init_sockbindrawhdrincl(int portno,int protocol) {
     return sfd;
 }
 //normal sockconnect for inet
-int init_sockconnectraw(int portno,protocol) {
-    struct sockaddr_in serv_addr;
-    struct hostent *server;
+int init_sockconnectraw(int portno,int protocol,struct sockaddr_in serv_addr) {
     int len, sfd;
-    server = gethostbyname("acemaster");
     if((sfd = socket(AF_INET, SOCK_RAW, protocol)) < 0){
         perror("socket() ");
         return -1;
     }
-    if (server == NULL) {
-        fprintf(stderr,"ERROR, no such host\n");
-        return -1;
-    }
     bzero((char *) &serv_addr, sizeof(serv_addr));
+    //Server
     serv_addr.sin_family = AF_INET;
-    bcopy((char *)server->h_addr, 
-         (char *)&serv_addr.sin_addr.s_addr,
-         server->h_length);
+    serv_addr.sin_addr.s_addr=inet_addr("127.0.0.1");
     serv_addr.sin_port = htons(portno);
+    //Done
     return sfd;
 
 }
 
 
-void printipheader(struct iphdr *iphm, struct sockaddr_in &saddr,struct sockaddr_in &daddr,char *buffer)
+void printipheader(struct iphdr *iph, struct sockaddr_in s_addr,struct sockaddr_in d_addr,char *buffer)
 {
 	unsigned int iphdrlen;
 	iphdrlen = iph->ihl*4;
 	char buf[BUFFER_SIZE];
-	printf("\n=====================IP HEADER======================\n")
+	printf("\n=====================IP HEADER======================\n");
 	memset((char *)&s_addr, 0, sizeof s_addr);
 	memset((char *)&d_addr, 0, sizeof d_addr);
 	s_addr.sin_addr.s_addr = iph->saddr;
