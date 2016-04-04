@@ -33,6 +33,15 @@ int init_sockbindraw(int portno,int protocol,struct sockaddr_in serv_addr) {
     return sfd;
 }
 
+int init_sockbindsniff(int portno) {
+    int len, sfd;
+    if((sfd = socket(AF_PACKET, SOCK_RAW,htons(ETH_P_ALL))) < 0){
+        perror("socket() ");
+        return -1;
+    }
+    return sfd;
+}
+
 int init_sockbindrawhdrincl(int portno,int protocol) {
     struct sockaddr_in myaddr;
     int len, sfd;
