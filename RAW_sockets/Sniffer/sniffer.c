@@ -4,13 +4,14 @@ int total=0;
 
 int main(int argc,char **argv)
 {
-	struct sockaddr_in serv_addr,saddr,daddr;
+	struct sockaddr_in serv_addr,saddr,daddr,checkaddr;
 	int portno=atoi(argv[1]);
 	int rsfd=init_sockbindsniff(portno);
 	char buffer[BUFFER_SIZE];
 	struct iphdr *iph;
 	int recvbytes;
 	int len;
+	checkaddr.sin_addr.s_addr=inet_addr(argv[2]);
 	while(1)
 	{
 		len=sizeof(serv_addr);
@@ -23,7 +24,7 @@ int main(int argc,char **argv)
 		{
 			printf("Packet count: %d \n",total);
 			iph=(struct iphdr *)(buffer+sizeof(struct ethhdr));
-			printipheader(iph,saddr,daddr,buffer);
+			printipheadersender(iph,saddr,daddr,buffer,checkaddr);
 		}
 		sleep(2);
 	}

@@ -111,3 +111,30 @@ void printipheader(struct iphdr *iph, struct sockaddr_in s_addr,struct sockaddr_
 	strcpy(buf, buffer+iphdrlen);
 	printf("\tMessage\n %s\n", buf);
 }
+
+void printipheadersender(struct iphdr *iph, struct sockaddr_in s_addr,struct sockaddr_in d_addr,char *buffer,struct sockaddr_in checkaddr)
+{
+    unsigned int iphdrlen;
+    iphdrlen = iph->ihl*4;
+    char buf[BUFFER_SIZE];
+    memset((char *)&s_addr, 0, sizeof s_addr);
+    memset((char *)&d_addr, 0, sizeof d_addr);
+    s_addr.sin_addr.s_addr = iph->saddr;
+    d_addr.sin_addr.s_addr = iph->daddr;
+    if(strcmp(inet_ntoa(s_addr.sin_addr),inet_ntoa(checkaddr.sin_addr)) == 0)
+    {
+        printf("\n=====================IP HEADER======================\n");
+        printf("|%4d|%4d|%8d|%16d|\n", (unsigned int)iph->version, (unsigned int)iph->ihl, (unsigned int)iph->tos, ntohs(iph->tot_len));
+        printf("------------------------------------\n");
+        printf("|%13d|R|D|M|%13d|\n", ntohs(iph->id), (unsigned int)iph->frag_off);
+        printf("------------------------------------\n");
+        printf("|%8d|%8d|%16d|\n", (unsigned int)iph->ttl, (unsigned int)iph->protocol, ntohs(iph->check));
+        printf("------------------------------------\n");
+        printf("%s\n", inet_ntoa(s_addr.sin_addr));
+        printf("------------------------------------\n");
+        printf("%s\n", inet_ntoa(d_addr.sin_addr));
+        printf("------------------------------------\n");
+        strcpy(buf, buffer+iphdrlen);
+        printf("\tMessage\n %s\n", buf);
+    }
+}
