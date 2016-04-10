@@ -53,6 +53,7 @@ void *clientthreadfunc(void *arg)
 int main(int argc, char *argv[])
 {
     int parentid=atoi(argv[2]);
+    int platform_no=atoi(argv[4]);
      int sfd,nsfd,n,portno;
      socklen_t clientn;
      char buffer[100];
@@ -60,19 +61,11 @@ int main(int argc, char *argv[])
     temp.portno=atoi(argv[3]);
     temp.protocol=146;
     pthread_create(&cabletv,NULL,clientthreadfunc,&temp);
-     struct sockaddr_in myaddr,clientaddr;
-     int i=0;
-    portno=atoi(argv[1]);
-    sfd=socket(AF_INET,SOCK_STREAM,0);
-    if(sfd<0)
-        error("Socket not initilizated");
-    bzero((char *)&myaddr,sizeof(myaddr));
-    myaddr.sin_family=AF_INET;
-    myaddr.sin_addr.s_addr=INADDR_ANY;
-    myaddr.sin_port=htons(portno);
-    if((bind(sfd,(struct sockaddr *) &myaddr, sizeof(myaddr)))<0)
-            error("Error on binding: ");
-    listen(sfd,5);
+    int usfd = init_sockconnectunix(argv[1]);
+    if(usfd < 0){
+        printf("sock() error\n");
+        exit(1);
+    }
     int service=0;
     int shmid1;
     key_t key1;
@@ -88,15 +81,20 @@ int main(int argc, char *argv[])
         perror("Failed to shmat:");
         exit(1);
     }
-    for(i=0;i<2;i++)
-        printf("SHM port value: %d\t SHM platform status: %d",shm->portno[i],shm->p[i]);
+    int i;
+    /*for(i=0;i<2;i++)
+        printf("SHM port value: %d\t SHM platform status: %d",shm->portno[i],shm->p[i]);*/
 
     while(1)
     {
-        nsfd=accept(sfd,(struct sockaddr *) &clientaddr, &clientn);
+        nsfd = recvfd(usfd);
+        /*printf("Recieved fd: \n");*/
+        if(nsfd < 0) {
+            perror("recv_fd() ");
+            exit(1);
+        }
         int pid=fork();
         if(pid == 0){
-            close(sfd);
             while(1){
                 bzero(buffer,250);
                 n=read(nsfd,buffer,100);
@@ -105,9 +103,7 @@ int main(int argc, char *argv[])
                     if(strcmp(buffer,"exit\n") == 0)
                     {
                         printf("Exiting...............\n");
-                        for(i=0;i<2;i++)
-                            if(shm->portno[i]== portno)
-                                    shm->p[i]=0;
+                        shm->p[platform_no]=0;
                         close(nsfd);
                          printf("Exiting......sending signal to %d\n",parentid);
                         kill(parentid,SIGUSR1);

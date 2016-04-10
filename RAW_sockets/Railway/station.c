@@ -17,6 +17,7 @@ static void sig_usr(int signo);
 
 int main(int argc, char *argv[])
 {
+    unlink(argv[1]);
     printf("Process id of parent station: %d\n",getpid());
     //Binding the signal
      signal(SIGUSR1,sig_usr);
@@ -31,6 +32,7 @@ int main(int argc, char *argv[])
      //==========End Select config===============
      socklen_t clientn;
      struct sockaddr_in myaddr,clientaddr;
+     struct sockaddr_un remote; int len;
      int i=0;
      //Stations ports
     for(i=0;i<argc-1;i++)
@@ -47,6 +49,7 @@ int main(int argc, char *argv[])
             error("Error on binding: ");
         listen(sfd[i],5);
     }
+    printf("Ports for platform specided................\n");
     for(i=0;i<argc-1;i++)
     {
         FD_SET(sfd[i],&readset);
@@ -77,8 +80,8 @@ int main(int argc, char *argv[])
     char *buffercmd="cd /home/acemaster/CS302/cs302-CN/RAW_sockets/Railway;./platform ";
     char platform1path[100];
     char platform2path[100];
-    snprintf(platform1path,sizeof(platform1path),"%s %d %d %d",buffercmd,8005,parentid,8008);
-    snprintf(platform2path,sizeof(platform2path),"%s %d %d %d",buffercmd,8006,parentid,8008);
+    snprintf(platform1path,sizeof(platform1path),"%s %s %d %d %d",buffercmd,argv[1],parentid,8008,0);
+    snprintf(platform2path,sizeof(platform2path),"%s %s %d %d %d",buffercmd,argv[1],parentid,8008,1);
     FILE *platform1=popen(platform1path,"w");
     FILE *platform2=popen(platform2path,"w");
     platfds[0]=fileno(platform1);
@@ -92,6 +95,13 @@ int main(int argc, char *argv[])
     int platform_no=-1;
     int platform_port=-1;
     int j;
+
+    int usfd = init_sockbindunix(argv[1]);
+    len = sizeof(remote);
+    int nusfd[2];
+    for(i=0;i<2;i++)
+        nusfd[i] = accept(usfd, (struct sockaddr*)&remote, &len); 
+    printf("All three platforms initilizated\n");
     while(1 && pid > 0)
     {
         int retstatus=select(max+1,&readset,NULL,NULL,&timeptr);
@@ -105,23 +115,21 @@ int main(int argc, char *argv[])
                     for(j=0;j<2;j++)
                     	if(shm->p[j]==0)
                     	{
-                    		shm->p[i]=1;
+                    		shm->p[j]=1;
                     		platform_no=j;
                             break;
                     	}
                     for(j=0;j<2;j++)
                         if(j!=platform_no)
-                            write(platfds[j],"Got plaform",12);
+                        {
+                            snprintf(buffer,sizeof(buffer),"%s %d","Got platform: ",platform_no);
+                            write(platfds[j],buffer,sizeof(buffer));
+                        }
+                    printf("Recieved platform : %d \n",platform_no);
                     nsfd=accept(sfd[i],(struct sockaddr *) &clientaddr, &clientn);
-                    int pid=fork();
-                    if(pid == 0){
-                        snprintf(buffer,sizeof(buffer),"%d",shm->portno[platform_no]);
-                        write(nsfd,buffer,sizeof(buffer));
-                        close(nsfd);
-                    }
-                    else if(pid > 0){
-                        close(nsfd);
-                    }
+                    if(sendfd(nusfd[platform_no],nsfd) < 0)
+                        printf("Sending failed\n");
+                    close(nsfd);
                 }
             }
         }
