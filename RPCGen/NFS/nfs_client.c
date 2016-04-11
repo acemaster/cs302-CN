@@ -48,12 +48,13 @@ main (int argc, char *argv[])
 	host = argv[1];
 	int i=0;
 	char argtosend[255];
-	strcpy(argtosend,argv[2]);
-	for(i=3;i<argc;i++)
+	while(1)
 	{
-		strcat(argtosend," ");
-		strcat(argtosend,argv[i]);
+		printf("acemaster > ");
+		fgets(argtosend,200,stdin);
+		if(strcmp(argtosend,"exit\n") == 0)
+			break;
+		nfs_prog_1 (host,argtosend);
 	}
-	nfs_prog_1 (host,argtosend);
 exit (0);
 }
