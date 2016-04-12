@@ -12,7 +12,7 @@ add_1_svc(intpair *argp, struct svc_req *rqstp)
 	static int  result;
 	printf("Add function called\n");
 	printf("Parameters %d %d\n",argp->a,argp->b);
-	result = argp-> a + argp->b;
+	result = argp-> a * argp->b;
 	printf("Returning %d\n",result);
 	return &result;
 }
